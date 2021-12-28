@@ -7,7 +7,6 @@ from unittest import mock
 
 import pytest
 from reorder_python_imports import _mod_startswith
-from reorder_python_imports import apply_import_sorting
 from reorder_python_imports import CodePartition
 from reorder_python_imports import CodeType
 from reorder_python_imports import fix_file_contents
@@ -15,7 +14,6 @@ from reorder_python_imports import get_line_offsets_by_line_no
 from reorder_python_imports import main
 from reorder_python_imports import partition_source
 from reorder_python_imports import remove_duplicated_imports
-from reorder_python_imports import separate_comma_imports
 from reorder_python_imports import TopLevelImportVisitor
 
 
@@ -234,44 +232,6 @@ def test_line_offsets_multiple_lines():
     assert src[ret[2]:] == 'world\n'
 
 
-def test_separate_comma_imports_trivial():
-    assert separate_comma_imports([]) == []
-
-
-def test_separate_comma_imports_none_to_separate():
-    input_partitions = [
-        CodePartition(CodeType.IMPORT, 'import os\n'),
-        CodePartition(CodeType.NON_CODE, '\n'),
-        CodePartition(CodeType.IMPORT, 'import six\n'),
-    ]
-    assert separate_comma_imports(input_partitions) == input_partitions
-
-
-def test_separate_comma_imports_separates_some():
-    assert separate_comma_imports([
-        CodePartition(CodeType.IMPORT, 'import os, sys\n'),
-    ]) == [
-        CodePartition(CodeType.IMPORT, 'import os\n'),
-        CodePartition(CodeType.IMPORT, 'import sys\n'),
-    ]
-
-
-def test_separate_comma_imports_removes_comments():
-    # Since it's not really possible to know what the comma points to, we just
-    # remove it
-    assert separate_comma_imports([
-        CodePartition(CodeType.IMPORT, 'import os, sys  # derp\n'),
-    ]) == [
-        CodePartition(CodeType.IMPORT, 'import os\n'),
-        CodePartition(CodeType.IMPORT, 'import sys\n'),
-    ]
-
-
-def test_separate_comma_imports_does_not_remove_comments_when_not_splitting():
-    input_partitions = [CodePartition(CodeType.IMPORT, 'import sys  # noqa\n')]
-    assert separate_comma_imports(input_partitions) == input_partitions
-
-
 def test_remove_duplicated_imports_trivial():
     assert remove_duplicated_imports([]) == []
 
@@ -323,147 +283,6 @@ def test_aliased_imports_not_considered_redundant_v2():
         CodePartition(CodeType.IMPORT, 'import os.path\n'),
     ]
     assert remove_duplicated_imports(partitions) == partitions
-
-
-def test_apply_import_sorting_trivial():
-    assert apply_import_sorting([]) == []
-
-
-def test_apply_import_sorting_all_types():
-    input_partitions = [
-        CodePartition(CodeType.PRE_IMPORT_CODE, '#!/usr/bin/env python\n'),
-        CodePartition(CodeType.PRE_IMPORT_CODE, '# -*- coding: UTF-8 -*-\n'),
-        CodePartition(CodeType.PRE_IMPORT_CODE, '"""foo"""\n'),
-        CodePartition(CodeType.IMPORT, 'import os\n'),
-        CodePartition(CodeType.CODE, '\n\nx = 5\n'),
-    ]
-    assert apply_import_sorting(input_partitions) == input_partitions
-
-
-def test_apply_import_sorting_sorts_imports():
-    assert apply_import_sorting([
-        # local imports
-        CodePartition(
-            CodeType.IMPORT, 'from reorder_python_imports import main\n',
-        ),
-        CodePartition(CodeType.IMPORT, 'import reorder_python_imports\n'),
-        # site-package imports
-        CodePartition(CodeType.IMPORT, 'from six import text_type\n'),
-        CodePartition(CodeType.IMPORT, 'import aspy\n'),
-        # System imports (out of order)
-        CodePartition(CodeType.IMPORT, 'from os import path\n'),
-        CodePartition(CodeType.IMPORT, 'import os\n'),
-    ]) == [
-        CodePartition(CodeType.IMPORT, 'import os\n'),
-        CodePartition(CodeType.IMPORT, 'from os import path\n'),
-        CodePartition(CodeType.NON_CODE, '\n'),
-        CodePartition(CodeType.IMPORT, 'import aspy\n'),
-        CodePartition(CodeType.IMPORT, 'from six import text_type\n'),
-        CodePartition(CodeType.NON_CODE, '\n'),
-        CodePartition(CodeType.IMPORT, 'import reorder_python_imports\n'),
-        CodePartition(
-            CodeType.IMPORT, 'from reorder_python_imports import main\n',
-        ),
-    ]
-
-
-def test_apply_import_sorting_sorts_imports_with_separate_relative():
-    assert apply_import_sorting(
-        [
-            # relative imports
-            CodePartition(CodeType.IMPORT, 'from .main import main\n'),
-            # local imports
-            CodePartition(
-                CodeType.IMPORT, 'from reorder_python_imports import main\n',
-            ),
-            CodePartition(CodeType.IMPORT, 'import reorder_python_imports\n'),
-            # site-package imports
-            CodePartition(CodeType.IMPORT, 'from six import text_type\n'),
-            CodePartition(CodeType.IMPORT, 'import aspy\n'),
-            # System imports (out of order)
-            CodePartition(CodeType.IMPORT, 'from os import path\n'),
-            CodePartition(CodeType.IMPORT, 'import os\n'),
-        ],
-        separate_relative=True,
-    ) == [
-        CodePartition(CodeType.IMPORT, 'import os\n'),
-        CodePartition(CodeType.IMPORT, 'from os import path\n'),
-        CodePartition(CodeType.NON_CODE, '\n'),
-        CodePartition(CodeType.IMPORT, 'import aspy\n'),
-        CodePartition(CodeType.IMPORT, 'from six import text_type\n'),
-        CodePartition(CodeType.NON_CODE, '\n'),
-        CodePartition(CodeType.IMPORT, 'import reorder_python_imports\n'),
-        CodePartition(
-            CodeType.IMPORT, 'from reorder_python_imports import main\n',
-        ),
-        CodePartition(CodeType.NON_CODE, '\n'),
-        CodePartition(CodeType.IMPORT, 'from .main import main\n'),
-    ]
-
-
-def test_apply_import_sorting_sorts_imports_with_separate_from_import():
-    assert apply_import_sorting(
-        [
-            # local imports
-            CodePartition(
-                CodeType.IMPORT, 'from reorder_python_imports import main\n',
-            ),
-            CodePartition(CodeType.IMPORT, 'import reorder_python_imports\n'),
-            # site-package imports
-            CodePartition(CodeType.IMPORT, 'from six import text_type\n'),
-            CodePartition(CodeType.IMPORT, 'import aspy\n'),
-            # System imports (out of order)
-            CodePartition(CodeType.IMPORT, 'from os import path\n'),
-            CodePartition(CodeType.IMPORT, 'import os\n'),
-        ],
-        separate_from_import=True,
-    ) == [
-        CodePartition(CodeType.IMPORT, 'import os\n'),
-        CodePartition(CodeType.NON_CODE, '\n'),
-        CodePartition(CodeType.IMPORT, 'from os import path\n'),
-        CodePartition(CodeType.NON_CODE, '\n'),
-        CodePartition(CodeType.IMPORT, 'import aspy\n'),
-        CodePartition(CodeType.NON_CODE, '\n'),
-        CodePartition(CodeType.IMPORT, 'from six import text_type\n'),
-        CodePartition(CodeType.NON_CODE, '\n'),
-        CodePartition(CodeType.IMPORT, 'import reorder_python_imports\n'),
-        CodePartition(CodeType.NON_CODE, '\n'),
-        CodePartition(
-            CodeType.IMPORT, 'from reorder_python_imports import main\n',
-        ),
-    ]
-
-
-def test_apply_import_sorting_sorts_imports_with_application_module():
-    assert apply_import_sorting(
-        [
-            CodePartition(CodeType.IMPORT, 'import _c_module\n'),
-            CodePartition(CodeType.IMPORT, 'import reorder_python_imports\n'),
-            CodePartition(CodeType.IMPORT, 'import third_party\n'),
-        ],
-        unclassifiable_application_modules=['_c_module'],
-    ) == [
-        CodePartition(CodeType.IMPORT, 'import third_party\n'),
-        CodePartition(CodeType.NON_CODE, '\n'),
-        CodePartition(CodeType.IMPORT, 'import _c_module\n'),
-        CodePartition(CodeType.IMPORT, 'import reorder_python_imports\n'),
-    ]
-
-
-def test_apply_import_sorting_maintains_comments():
-    input_partitions = [
-        CodePartition(CodeType.IMPORT, 'import foo  # noqa\n'),
-    ]
-    assert apply_import_sorting(input_partitions) == input_partitions
-
-
-def test_apply_import_sorting_removes_padding_if_only_imports():
-    assert apply_import_sorting([
-        CodePartition(CodeType.IMPORT, 'import foo\n'),
-        CodePartition(CodeType.NON_CODE, '\n\n'),
-    ]) == [
-        CodePartition(CodeType.IMPORT, 'import foo\n'),
-    ]
 
 
 def test_add_import_trivial():
