@@ -26,7 +26,7 @@ from aspy.refactor_imports.import_obj import import_obj_from_str
 from aspy.refactor_imports.import_obj import ImportImport
 from aspy.refactor_imports.sort import sort
 
-CodeType = enum.Enum("CodeType", "PRE_IMPORT_CODE IMPORT NON_CODE CODE")
+CodeType = enum.Enum('CodeType', 'PRE_IMPORT_CODE IMPORT NON_CODE CODE')
 
 
 class CodePartition(NamedTuple):
@@ -63,7 +63,7 @@ def get_line_offsets_by_line_no(src: str) -> List[int]:
 
 
 def _partitions_to_src(partitions: Iterable[CodePartition]) -> str:
-    return "".join(part.src for part in partitions)
+    return ''.join(part.src for part in partitions)
 
 
 def partition_source(src: str) -> List[CodePartition]:
@@ -91,7 +91,7 @@ def partition_source(src: str) -> List[CodePartition]:
         # Searching for a start of a chunk
         if pending_chunk_type is None:
             if not seen_import and token_type == tokenize.COMMENT:
-                if "noreorder" in token_text:
+                if 'noreorder' in token_text:
                     chunks.append(CodePartition(CodeType.CODE, src[startpos:]))
                     break
                 else:
@@ -112,7 +112,7 @@ def partition_source(src: str) -> List[CodePartition]:
                 startpos = endpos
                 chunks.append(CodePartition(CodeType.NON_CODE, srctext))
             elif token_type == tokenize.COMMENT:
-                if "noreorder" in token_text:
+                if 'noreorder' in token_text:
                     chunks.append(CodePartition(CodeType.CODE, src[startpos:]))
                     break
                 else:
@@ -135,7 +135,7 @@ def partition_source(src: str) -> List[CodePartition]:
             chunks.append(CodePartition(pending_chunk_type, srctext))
             pending_chunk_type = None
             possible_ending_tokens = None
-        elif token_type == tokenize.COMMENT and "noreorder" in token_text:
+        elif token_type == tokenize.COMMENT and 'noreorder' in token_text:
             chunks.append(CodePartition(CodeType.CODE, src[startpos:]))
             break
 
@@ -162,24 +162,24 @@ def combine_trailing_code_chunks(
 
 
 def add_imports(
-    partitions: Iterable[CodePartition], to_add: Tuple[str, ...] = ()
+    partitions: Iterable[CodePartition], to_add: Tuple[str, ...] = (),
 ) -> List[CodePartition]:
     partitions = list(partitions)
     if not _partitions_to_src(partitions).strip():
         return partitions
 
     # If we don't have a trailing newline, this refactor is wrong
-    if not partitions[-1].src.endswith("\n"):
-        partitions[-1] = partitions[-1]._replace(src=partitions[-1].src + "\n")
+    if not partitions[-1].src.endswith('\n'):
+        partitions[-1] = partitions[-1]._replace(src=partitions[-1].src + '\n')
 
     return partitions + [
-        CodePartition(CodeType.IMPORT, imp_statement.strip() + "\n")
+        CodePartition(CodeType.IMPORT, imp_statement.strip() + '\n')
         for imp_statement in to_add
     ]
 
 
 def remove_imports(
-    partitions: Iterable[CodePartition], to_remove: Tuple[str, ...] = ()
+    partitions: Iterable[CodePartition], to_remove: Tuple[str, ...] = (),
 ) -> List[CodePartition]:
     to_remove_imports: Set[AbstractImportObj] = set()
     for s in to_remove:
@@ -188,8 +188,8 @@ def remove_imports(
     def _inner() -> Generator[CodePartition, None, None]:
         for partition in partitions:
             if (
-                partition.code_type is not CodeType.IMPORT
-                or import_obj_from_str(partition.src) not in to_remove_imports
+                partition.code_type is not CodeType.IMPORT or
+                import_obj_from_str(partition.src) not in to_remove_imports
             ):
                 yield partition
 
@@ -201,7 +201,7 @@ def _mod_startswith(mod_parts: List[str], prefix_parts: List[str]) -> bool:
 
 
 def replace_imports(
-    partitions: Iterable[CodePartition], to_replace: Iterable[ImportToReplace] = ()
+    partitions: Iterable[CodePartition], to_replace: Iterable[ImportToReplace] = (),
 ) -> List[CodePartition]:
     def _inner() -> Generator[CodePartition, None, None]:
         for partition in partitions:
@@ -213,7 +213,7 @@ def replace_imports(
                     yield partition
                     continue
 
-                mod_parts = import_obj.import_statement.module.split(".")
+                mod_parts = import_obj.import_statement.module.split('.')
                 symbol = import_obj.import_statement.symbol
                 asname = import_obj.import_statement.asname
 
@@ -222,19 +222,19 @@ def replace_imports(
                         not attr and _mod_startswith(mod_parts, orig_mod)
                     ):
                         mod_parts[: len(orig_mod)] = new_mod
-                        import_obj.ast_obj.module = ".".join(mod_parts)
+                        import_obj.ast_obj.module = '.'.join(mod_parts)
                         new_src = import_obj.to_text()
                         yield partition._replace(src=new_src)
                         break
                     # from x.y import z => import z
                     elif (
-                        not attr
-                        and mod_parts + [symbol] == orig_mod
-                        and len(new_mod) == 1
+                        not attr and
+                        mod_parts + [symbol] == orig_mod and
+                        len(new_mod) == 1
                     ):
                         (mod_name,) = new_mod
-                        asname_src = f" as {asname}" if asname else ""
-                        new_src = f"import {mod_name}{asname_src}\n"
+                        asname_src = f' as {asname}' if asname else ''
+                        new_src = f'import {mod_name}{asname_src}\n'
                         yield partition._replace(src=new_src)
                         break
                 else:
@@ -249,9 +249,9 @@ def _module_to_base_modules(s: str) -> Generator[str, None, None]:
     """return all module names that would be imported due to this
     import-import
     """
-    parts = s.split(".")
+    parts = s.split('.')
     for i in range(1, len(parts)):
-        yield ".".join(parts[:i])
+        yield '.'.join(parts[:i])
 
 
 def remove_duplicated_imports(
@@ -267,11 +267,11 @@ def remove_duplicated_imports(
             if import_obj not in seen:
                 seen.add(import_obj)
                 if (
-                    isinstance(import_obj, ImportImport)
-                    and not import_obj.import_statement.asname
+                    isinstance(import_obj, ImportImport) and
+                    not import_obj.import_statement.asname
                 ):
                     seen_module_names.update(
-                        _module_to_base_modules(import_obj.import_statement.module)
+                        _module_to_base_modules(import_obj.import_statement.module),
                     )
                 without_exact_duplicates.append(partition)
         else:
@@ -282,9 +282,9 @@ def remove_duplicated_imports(
         if partition.code_type is CodeType.IMPORT:
             import_obj = import_obj_from_str(partition.src)
             if (
-                isinstance(import_obj, ImportImport)
-                and not import_obj.import_statement.asname
-                and import_obj.import_statement.module in seen_module_names
+                isinstance(import_obj, ImportImport) and
+                not import_obj.import_statement.asname and
+                import_obj.import_statement.module in seen_module_names
             ):
                 continue
         out_partitions.append(partition)
@@ -307,9 +307,9 @@ def _get_steps(
 
 def _most_common_line_ending(s: str) -> str:
     # initialize in case there's no line endings at all
-    counts = collections.Counter({"\n": 0})
+    counts = collections.Counter({'\n': 0})
     for line in s.splitlines(True):
-        for ending in ("\r\n", "\r", "\n"):
+        for ending in ('\r\n', '\r', '\n'):
             if line.endswith(ending):
                 counts[ending] += 1
                 break
@@ -325,26 +325,26 @@ def fix_file_contents(
 ) -> str:
     # internally use `'\n` as the newline and normalize at the very end
     nl = _most_common_line_ending(contents)
-    contents = contents.replace("\r\n", "\n").replace("\r", "\n")
+    contents = contents.replace('\r\n', '\n').replace('\r', '\n')
 
     partitioned = partition_source(contents)
     for step in _get_steps(
-        imports_to_add, imports_to_remove, imports_to_replace, **sort_kwargs
+        imports_to_add, imports_to_remove, imports_to_replace, **sort_kwargs,
     ):
         partitioned = step(partitioned)
-    return _partitions_to_src(partitioned).replace("\n", nl)
+    return _partitions_to_src(partitioned).replace('\n', nl)
 
 
 def _fix_file(filename: str, args: argparse.Namespace) -> int:
-    if filename == "-":
+    if filename == '-':
         contents_bytes = sys.stdin.buffer.read()
     else:
-        with open(filename, "rb") as f:
+        with open(filename, 'rb') as f:
             contents_bytes = f.read()
     try:
         contents = contents_bytes.decode()
     except UnicodeDecodeError:
-        print(f"{filename} is non-utf-8 (not supported)", file=sys.stderr)
+        print(f'{filename} is non-utf-8 (not supported)', file=sys.stderr)
         return 1
 
     new_contents = fix_file_contents(
@@ -354,23 +354,23 @@ def _fix_file(filename: str, args: argparse.Namespace) -> int:
         imports_to_replace=args.replace_import,
         separate_relative=args.separate_relative,
         separate_from_import=args.separate_from_import,
-        application_directories=args.application_directories.split(":"),
+        application_directories=args.application_directories.split(':'),
         unclassifiable_application_modules=args.unclassifiable,
     )
-    if filename == "-":
+    if filename == '-':
         if args.diff_only:
-            _report_diff(contents, new_contents, "")
+            _report_diff(contents, new_contents, '')
         else:
-            print(new_contents, end="")
+            print(new_contents, end='')
     elif contents != new_contents:
         if args.diff_only:
             _report_diff(contents, new_contents, filename)
         elif args.print_only:
-            print(f"==> {filename} <==", file=sys.stderr)
-            print(new_contents, end="")
+            print(f'==> {filename} <==', file=sys.stderr)
+            print(new_contents, end='')
         else:
-            print(f"Reordering imports in {filename}", file=sys.stderr)
-            with open(filename, "wb") as f:
+            print(f'Reordering imports in {filename}', file=sys.stderr)
+            with open(filename, 'wb') as f:
                 f.write(new_contents.encode())
 
     if args.exit_zero_even_if_changed:
@@ -380,33 +380,33 @@ def _fix_file(filename: str, args: argparse.Namespace) -> int:
 
 
 def _report_diff(contents: str, new_contents: str, filename: str) -> None:
-    diff = "".join(
+    diff = ''.join(
         difflib.unified_diff(
             io.StringIO(contents).readlines(),
             io.StringIO(new_contents).readlines(),
             fromfile=filename,
             tofile=filename,
-        )
+        ),
     )
-    if diff and not diff.endswith("\n"):
-        diff += "\n\\ No newline at end of file\n"
+    if diff and not diff.endswith('\n'):
+        diff += '\n\\ No newline at end of file\n'
 
-    print(diff, end="")
+    print(diff, end='')
 
 
 REMOVALS: Dict[Tuple[int, ...], Set[str]] = collections.defaultdict(set)
 REPLACES: Dict[Tuple[int, ...], Set[str]] = collections.defaultdict(set)
 
-REMOVALS[(3,)].add("from io import open")
+REMOVALS[(3,)].add('from io import open')
 
 # GENERATED VIA generate-future-info
-REMOVALS[(2, 2)].add("from __future__ import nested_scopes")
-REMOVALS[(2, 3)].add("from __future__ import generators")
-REMOVALS[(2, 6)].add("from __future__ import with_statement")
+REMOVALS[(2, 2)].add('from __future__ import nested_scopes')
+REMOVALS[(2, 3)].add('from __future__ import generators')
+REMOVALS[(2, 6)].add('from __future__ import with_statement')
 REMOVALS[(3,)].add(
-    "from __future__ import absolute_import, division, print_function, unicode_literals"
+    'from __future__ import absolute_import, division, print_function, unicode_literals',
 )  # noqa: E501
-REMOVALS[(3, 7)].add("from __future__ import generator_stop")
+REMOVALS[(3, 7)].add('from __future__ import generator_stop')
 # END GENERATED
 
 # GENERATED VIA generate-typing-rewrite-info
@@ -414,85 +414,85 @@ REMOVALS[(3, 7)].add("from __future__ import generator_stop")
 #     flake8-typing-imports==1.10.1
 #     mypy_extensions==0.4.3
 #     typing_extensions==3.7.4.3
-REPLACES[(3, 7)].update(("mypy_extensions=typing:NoReturn",))
-REPLACES[(3, 8)].update(("mypy_extensions=typing:TypedDict",))
+REPLACES[(3, 7)].update(('mypy_extensions=typing:NoReturn',))
+REPLACES[(3, 8)].update(('mypy_extensions=typing:TypedDict',))
 REPLACES[(3, 6)].update(
     (
-        "typing_extensions=typing:AsyncIterable",
-        "typing_extensions=typing:AsyncIterator",
-        "typing_extensions=typing:Awaitable",
-        "typing_extensions=typing:ClassVar",
-        "typing_extensions=typing:ContextManager",
-        "typing_extensions=typing:Coroutine",
-        "typing_extensions=typing:DefaultDict",
-        "typing_extensions=typing:NewType",
-        "typing_extensions=typing:TYPE_CHECKING",
-        "typing_extensions=typing:Text",
-        "typing_extensions=typing:Type",
-        "typing_extensions=typing:get_type_hints",
-        "typing_extensions=typing:overload",
-    )
+        'typing_extensions=typing:AsyncIterable',
+        'typing_extensions=typing:AsyncIterator',
+        'typing_extensions=typing:Awaitable',
+        'typing_extensions=typing:ClassVar',
+        'typing_extensions=typing:ContextManager',
+        'typing_extensions=typing:Coroutine',
+        'typing_extensions=typing:DefaultDict',
+        'typing_extensions=typing:NewType',
+        'typing_extensions=typing:TYPE_CHECKING',
+        'typing_extensions=typing:Text',
+        'typing_extensions=typing:Type',
+        'typing_extensions=typing:get_type_hints',
+        'typing_extensions=typing:overload',
+    ),
 )
 REPLACES[(3, 7)].update(
     (
-        "typing_extensions=typing:AsyncContextManager",
-        "typing_extensions=typing:AsyncGenerator",
-        "typing_extensions=typing:ChainMap",
-        "typing_extensions=typing:Counter",
-        "typing_extensions=typing:Deque",
-    )
+        'typing_extensions=typing:AsyncContextManager',
+        'typing_extensions=typing:AsyncGenerator',
+        'typing_extensions=typing:ChainMap',
+        'typing_extensions=typing:Counter',
+        'typing_extensions=typing:Deque',
+    ),
 )
 REPLACES[(3, 8)].update(
     (
-        "typing_extensions=typing:Final",
-        "typing_extensions=typing:Literal",
-        "typing_extensions=typing:Protocol",
-        "typing_extensions=typing:SupportsIndex",
-        "typing_extensions=typing:TypedDict",
-        "typing_extensions=typing:final",
-        "typing_extensions=typing:get_args",
-        "typing_extensions=typing:get_origin",
-        "typing_extensions=typing:runtime_checkable",
-    )
+        'typing_extensions=typing:Final',
+        'typing_extensions=typing:Literal',
+        'typing_extensions=typing:Protocol',
+        'typing_extensions=typing:SupportsIndex',
+        'typing_extensions=typing:TypedDict',
+        'typing_extensions=typing:final',
+        'typing_extensions=typing:get_args',
+        'typing_extensions=typing:get_origin',
+        'typing_extensions=typing:runtime_checkable',
+    ),
 )
-REPLACES[(3, 9)].update(("typing_extensions=typing:Annotated",))
+REPLACES[(3, 9)].update(('typing_extensions=typing:Annotated',))
 # END GENERATED
 
 # GENERATED VIA generate-typing-pep585-rewrites
 REPLACES[(3, 9)].update(
     (
-        "typing=collections.abc:AsyncGenerator",
-        "typing=collections.abc:AsyncIterable",
-        "typing=collections.abc:AsyncIterator",
-        "typing=collections.abc:Awaitable",
-        "typing=collections.abc:ByteString",
-        "typing=collections.abc:Callable",
-        "typing=collections.abc:Collection",
-        "typing=collections.abc:Container",
-        "typing=collections.abc:Coroutine",
-        "typing=collections.abc:Generator",
-        "typing=collections.abc:Hashable",
-        "typing=collections.abc:ItemsView",
-        "typing=collections.abc:Iterable",
-        "typing=collections.abc:Iterator",
-        "typing=collections.abc:KeysView",
-        "typing=collections.abc:Mapping",
-        "typing=collections.abc:MappingView",
-        "typing=collections.abc:MutableMapping",
-        "typing=collections.abc:MutableSequence",
-        "typing=collections.abc:MutableSet",
-        "typing=collections.abc:Reversible",
-        "typing=collections.abc:Sequence",
-        "typing=collections.abc:Sized",
-        "typing=collections.abc:ValuesView",
-        "typing=collections:ChainMap",
-        "typing=collections:Counter",
-        "typing=collections:OrderedDict",
-        "typing=re:Match",
-        "typing=re:Pattern",
-        "typing.re=re:Match",
-        "typing.re=re:Pattern",
-    )
+        'typing=collections.abc:AsyncGenerator',
+        'typing=collections.abc:AsyncIterable',
+        'typing=collections.abc:AsyncIterator',
+        'typing=collections.abc:Awaitable',
+        'typing=collections.abc:ByteString',
+        'typing=collections.abc:Callable',
+        'typing=collections.abc:Collection',
+        'typing=collections.abc:Container',
+        'typing=collections.abc:Coroutine',
+        'typing=collections.abc:Generator',
+        'typing=collections.abc:Hashable',
+        'typing=collections.abc:ItemsView',
+        'typing=collections.abc:Iterable',
+        'typing=collections.abc:Iterator',
+        'typing=collections.abc:KeysView',
+        'typing=collections.abc:Mapping',
+        'typing=collections.abc:MappingView',
+        'typing=collections.abc:MutableMapping',
+        'typing=collections.abc:MutableSequence',
+        'typing=collections.abc:MutableSet',
+        'typing=collections.abc:Reversible',
+        'typing=collections.abc:Sequence',
+        'typing=collections.abc:Sized',
+        'typing=collections.abc:ValuesView',
+        'typing=collections:ChainMap',
+        'typing=collections:Counter',
+        'typing=collections:OrderedDict',
+        'typing=re:Match',
+        'typing=re:Pattern',
+        'typing.re=re:Match',
+        'typing.re=re:Pattern',
+    ),
 )
 # END GENERATED
 
@@ -500,31 +500,31 @@ REPLACES[(3, 9)].update(
 # Using future==0.18.2
 REMOVALS[(3,)].update(
     (
-        "from builtins import *",
-        "from builtins import ascii",
-        "from builtins import bytes",
-        "from builtins import chr",
-        "from builtins import dict",
-        "from builtins import filter",
-        "from builtins import hex",
-        "from builtins import input",
-        "from builtins import int",
-        "from builtins import isinstance",
-        "from builtins import list",
-        "from builtins import map",
-        "from builtins import max",
-        "from builtins import min",
-        "from builtins import next",
-        "from builtins import object",
-        "from builtins import oct",
-        "from builtins import open",
-        "from builtins import pow",
-        "from builtins import range",
-        "from builtins import round",
-        "from builtins import str",
-        "from builtins import super",
-        "from builtins import zip",
-    )
+        'from builtins import *',
+        'from builtins import ascii',
+        'from builtins import bytes',
+        'from builtins import chr',
+        'from builtins import dict',
+        'from builtins import filter',
+        'from builtins import hex',
+        'from builtins import input',
+        'from builtins import int',
+        'from builtins import isinstance',
+        'from builtins import list',
+        'from builtins import map',
+        'from builtins import max',
+        'from builtins import min',
+        'from builtins import next',
+        'from builtins import object',
+        'from builtins import oct',
+        'from builtins import open',
+        'from builtins import pow',
+        'from builtins import range',
+        'from builtins import round',
+        'from builtins import str',
+        'from builtins import super',
+        'from builtins import zip',
+    ),
 )
 # END GENERATED
 
@@ -532,82 +532,82 @@ REMOVALS[(3,)].update(
 # Using six==1.15.0
 REMOVALS[(3,)].update(
     (
-        "from six import callable",
-        "from six import next",
-        "from six.moves import filter",
-        "from six.moves import input",
-        "from six.moves import map",
-        "from six.moves import range",
-        "from six.moves import zip",
-    )
+        'from six import callable',
+        'from six import next',
+        'from six.moves import filter',
+        'from six.moves import input',
+        'from six.moves import map',
+        'from six.moves import range',
+        'from six.moves import zip',
+    ),
 )
 REPLACES[(3,)].update(
     (
-        "six.moves.BaseHTTPServer=http.server",
-        "six.moves.CGIHTTPServer=http.server",
-        "six.moves.SimpleHTTPServer=http.server",
-        "six.moves._dummy_thread=_dummy_thread",
-        "six.moves._thread=_thread",
-        "six.moves.builtins=builtins",
-        "six.moves.cPickle=pickle",
-        "six.moves.collections_abc=collections.abc",
-        "six.moves.configparser=configparser",
-        "six.moves.copyreg=copyreg",
-        "six.moves.dbm_gnu=dbm.gnu",
-        "six.moves.dbm_ndbm=dbm.ndbm",
-        "six.moves.email_mime_base=email.mime.base",
-        "six.moves.email_mime_image=email.mime.image",
-        "six.moves.email_mime_multipart=email.mime.multipart",
-        "six.moves.email_mime_nonmultipart=email.mime.nonmultipart",
-        "six.moves.email_mime_text=email.mime.text",
-        "six.moves.html_entities=html.entities",
-        "six.moves.html_parser=html.parser",
-        "six.moves.http_client=http.client",
-        "six.moves.http_cookiejar=http.cookiejar",
-        "six.moves.http_cookies=http.cookies",
-        "six.moves.queue=queue",
-        "six.moves.reprlib=reprlib",
-        "six.moves.socketserver=socketserver",
-        "six.moves.tkinter=tkinter",
-        "six.moves.tkinter_colorchooser=tkinter.colorchooser",
-        "six.moves.tkinter_commondialog=tkinter.commondialog",
-        "six.moves.tkinter_constants=tkinter.constants",
-        "six.moves.tkinter_dialog=tkinter.dialog",
-        "six.moves.tkinter_dnd=tkinter.dnd",
-        "six.moves.tkinter_filedialog=tkinter.filedialog",
-        "six.moves.tkinter_font=tkinter.font",
-        "six.moves.tkinter_messagebox=tkinter.messagebox",
-        "six.moves.tkinter_scrolledtext=tkinter.scrolledtext",
-        "six.moves.tkinter_simpledialog=tkinter.simpledialog",
-        "six.moves.tkinter_tix=tkinter.tix",
-        "six.moves.tkinter_tkfiledialog=tkinter.filedialog",
-        "six.moves.tkinter_tksimpledialog=tkinter.simpledialog",
-        "six.moves.tkinter_ttk=tkinter.ttk",
-        "six.moves.urllib.error=urllib.error",
-        "six.moves.urllib.parse=urllib.parse",
-        "six.moves.urllib.request=urllib.request",
-        "six.moves.urllib.response=urllib.response",
-        "six.moves.urllib.robotparser=urllib.robotparser",
-        "six.moves.urllib_error=urllib.error",
-        "six.moves.urllib_parse=urllib.parse",
-        "six.moves.urllib_robotparser=urllib.robotparser",
-        "six.moves.xmlrpc_client=xmlrpc.client",
-        "six.moves.xmlrpc_server=xmlrpc.server",
-        "six.moves=collections:UserDict",
-        "six.moves=collections:UserList",
-        "six.moves=collections:UserString",
-        "six.moves=functools:reduce",
-        "six.moves=io:StringIO",
-        "six.moves=itertools:filterfalse",
-        "six.moves=itertools:zip_longest",
-        "six.moves=os:getcwd",
-        "six.moves=os:getcwdb",
-        "six.moves=subprocess:getoutput",
-        "six.moves=sys:intern",
-        "six=functools:wraps",
-        "six=io:BytesIO",
-        "six=io:StringIO",
-    )
+        'six.moves.BaseHTTPServer=http.server',
+        'six.moves.CGIHTTPServer=http.server',
+        'six.moves.SimpleHTTPServer=http.server',
+        'six.moves._dummy_thread=_dummy_thread',
+        'six.moves._thread=_thread',
+        'six.moves.builtins=builtins',
+        'six.moves.cPickle=pickle',
+        'six.moves.collections_abc=collections.abc',
+        'six.moves.configparser=configparser',
+        'six.moves.copyreg=copyreg',
+        'six.moves.dbm_gnu=dbm.gnu',
+        'six.moves.dbm_ndbm=dbm.ndbm',
+        'six.moves.email_mime_base=email.mime.base',
+        'six.moves.email_mime_image=email.mime.image',
+        'six.moves.email_mime_multipart=email.mime.multipart',
+        'six.moves.email_mime_nonmultipart=email.mime.nonmultipart',
+        'six.moves.email_mime_text=email.mime.text',
+        'six.moves.html_entities=html.entities',
+        'six.moves.html_parser=html.parser',
+        'six.moves.http_client=http.client',
+        'six.moves.http_cookiejar=http.cookiejar',
+        'six.moves.http_cookies=http.cookies',
+        'six.moves.queue=queue',
+        'six.moves.reprlib=reprlib',
+        'six.moves.socketserver=socketserver',
+        'six.moves.tkinter=tkinter',
+        'six.moves.tkinter_colorchooser=tkinter.colorchooser',
+        'six.moves.tkinter_commondialog=tkinter.commondialog',
+        'six.moves.tkinter_constants=tkinter.constants',
+        'six.moves.tkinter_dialog=tkinter.dialog',
+        'six.moves.tkinter_dnd=tkinter.dnd',
+        'six.moves.tkinter_filedialog=tkinter.filedialog',
+        'six.moves.tkinter_font=tkinter.font',
+        'six.moves.tkinter_messagebox=tkinter.messagebox',
+        'six.moves.tkinter_scrolledtext=tkinter.scrolledtext',
+        'six.moves.tkinter_simpledialog=tkinter.simpledialog',
+        'six.moves.tkinter_tix=tkinter.tix',
+        'six.moves.tkinter_tkfiledialog=tkinter.filedialog',
+        'six.moves.tkinter_tksimpledialog=tkinter.simpledialog',
+        'six.moves.tkinter_ttk=tkinter.ttk',
+        'six.moves.urllib.error=urllib.error',
+        'six.moves.urllib.parse=urllib.parse',
+        'six.moves.urllib.request=urllib.request',
+        'six.moves.urllib.response=urllib.response',
+        'six.moves.urllib.robotparser=urllib.robotparser',
+        'six.moves.urllib_error=urllib.error',
+        'six.moves.urllib_parse=urllib.parse',
+        'six.moves.urllib_robotparser=urllib.robotparser',
+        'six.moves.xmlrpc_client=xmlrpc.client',
+        'six.moves.xmlrpc_server=xmlrpc.server',
+        'six.moves=collections:UserDict',
+        'six.moves=collections:UserList',
+        'six.moves=collections:UserString',
+        'six.moves=functools:reduce',
+        'six.moves=io:StringIO',
+        'six.moves=itertools:filterfalse',
+        'six.moves=itertools:zip_longest',
+        'six.moves=os:getcwd',
+        'six.moves=os:getcwdb',
+        'six.moves=subprocess:getoutput',
+        'six.moves=sys:intern',
+        'six=functools:wraps',
+        'six=io:BytesIO',
+        'six=io:StringIO',
+    ),
 )
 # END GENERATED
 
@@ -615,33 +615,33 @@ REPLACES[(3,)].update(
 # Using mock==4.0.3
 REPLACES[(3,)].update(
     (
-        "mock.mock=unittest.mock:ANY",
-        "mock.mock=unittest.mock:DEFAULT",
-        "mock.mock=unittest.mock:FILTER_DIR",
-        "mock.mock=unittest.mock:MagicMock",
-        "mock.mock=unittest.mock:Mock",
-        "mock.mock=unittest.mock:NonCallableMagicMock",
-        "mock.mock=unittest.mock:NonCallableMock",
-        "mock.mock=unittest.mock:PropertyMock",
-        "mock.mock=unittest.mock:call",
-        "mock.mock=unittest.mock:create_autospec",
-        "mock.mock=unittest.mock:mock_open",
-        "mock.mock=unittest.mock:patch",
-        "mock.mock=unittest.mock:sentinel",
-        "mock=unittest.mock:ANY",
-        "mock=unittest.mock:DEFAULT",
-        "mock=unittest.mock:FILTER_DIR",
-        "mock=unittest.mock:MagicMock",
-        "mock=unittest.mock:Mock",
-        "mock=unittest.mock:NonCallableMagicMock",
-        "mock=unittest.mock:NonCallableMock",
-        "mock=unittest.mock:PropertyMock",
-        "mock=unittest.mock:call",
-        "mock=unittest.mock:create_autospec",
-        "mock=unittest.mock:mock_open",
-        "mock=unittest.mock:patch",
-        "mock=unittest.mock:sentinel",
-    )
+        'mock.mock=unittest.mock:ANY',
+        'mock.mock=unittest.mock:DEFAULT',
+        'mock.mock=unittest.mock:FILTER_DIR',
+        'mock.mock=unittest.mock:MagicMock',
+        'mock.mock=unittest.mock:Mock',
+        'mock.mock=unittest.mock:NonCallableMagicMock',
+        'mock.mock=unittest.mock:NonCallableMock',
+        'mock.mock=unittest.mock:PropertyMock',
+        'mock.mock=unittest.mock:call',
+        'mock.mock=unittest.mock:create_autospec',
+        'mock.mock=unittest.mock:mock_open',
+        'mock.mock=unittest.mock:patch',
+        'mock.mock=unittest.mock:sentinel',
+        'mock=unittest.mock:ANY',
+        'mock=unittest.mock:DEFAULT',
+        'mock=unittest.mock:FILTER_DIR',
+        'mock=unittest.mock:MagicMock',
+        'mock=unittest.mock:Mock',
+        'mock=unittest.mock:NonCallableMagicMock',
+        'mock=unittest.mock:NonCallableMock',
+        'mock=unittest.mock:PropertyMock',
+        'mock=unittest.mock:call',
+        'mock=unittest.mock:create_autospec',
+        'mock=unittest.mock:mock_open',
+        'mock=unittest.mock:patch',
+        'mock=unittest.mock:sentinel',
+    ),
 )
 # END GENERATED
 
@@ -649,12 +649,12 @@ REPLACES[(3,)].update(
 def _add_version_options(parser: argparse.ArgumentParser) -> None:
     versions = sorted(REMOVALS.keys() | REPLACES.keys())
 
-    msg = "Removes/updates obsolete imports; implies all older versions."
+    msg = 'Removes/updates obsolete imports; implies all older versions.'
     parser.add_argument(
         f'--py{"".join(str(n) for n in versions[0])}-plus',
         help=msg,
-        action="store_const",
-        dest="min_version",
+        action='store_const',
+        dest='min_version',
         const=versions[0],
         default=(0,),
     )
@@ -662,8 +662,8 @@ def _add_version_options(parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             f'--py{"".join(str(n) for n in version)}-plus',
             help=msg,
-            action="store_const",
-            dest="min_version",
+            action='store_const',
+            dest='min_version',
             const=version,
         )
 
@@ -672,109 +672,109 @@ def _validate_import(s: str) -> str:
     try:
         import_obj_from_str(s)
     except (SyntaxError, KeyError):
-        raise argparse.ArgumentTypeError(f"expected import: {s!r}")
+        raise argparse.ArgumentTypeError(f'expected import: {s!r}')
     else:
         return s
 
 
 def _validate_replace_import(s: str) -> ImportToReplace:
-    mods, _, attr = s.partition(":")
+    mods, _, attr = s.partition(':')
     try:
-        orig_mod, new_mod = mods.split("=")
+        orig_mod, new_mod = mods.split('=')
     except ValueError:
         raise argparse.ArgumentTypeError(
-            f"expected `orig.mod=new.mod` or `orig.mod=new.mod:attr`: {s!r}"
+            f'expected `orig.mod=new.mod` or `orig.mod=new.mod:attr`: {s!r}',
         )
     else:
-        return orig_mod.split("."), new_mod.split("."), attr
+        return orig_mod.split('.'), new_mod.split('.'), attr
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "filenames",
-        nargs="*",
-        help="If `-` is given, reads from stdin and writes to stdout.",
+        'filenames',
+        nargs='*',
+        help='If `-` is given, reads from stdin and writes to stdout.',
     )
     group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument(
-        "--diff-only",
-        action="store_true",
-        help="(Deprecated) Show unified diff instead of applying reordering.",
+        '--diff-only',
+        action='store_true',
+        help='(Deprecated) Show unified diff instead of applying reordering.',
     )
     group.add_argument(
-        "--print-only",
-        action="store_true",
+        '--print-only',
+        action='store_true',
         help=(
-            "(Deprecated) "
-            "Print the output of a single file after reordering. "
-            "Consider using `-` for the filename instead."
+            '(Deprecated) '
+            'Print the output of a single file after reordering. '
+            'Consider using `-` for the filename instead.'
         ),
     )
-    parser.add_argument("--exit-zero-even-if-changed", action="store_true")
+    parser.add_argument('--exit-zero-even-if-changed', action='store_true')
     parser.add_argument(
-        "--add-import",
-        action="append",
+        '--add-import',
+        action='append',
         default=[],
         type=_validate_import,
-        help="Import to add to each file.  Can be specified multiple times.",
+        help='Import to add to each file.  Can be specified multiple times.',
     )
     parser.add_argument(
-        "--remove-import",
-        action="append",
+        '--remove-import',
+        action='append',
         default=[],
         type=_validate_import,
-        help=("Import to remove from each file.  " "Can be specified multiple times."),
+        help=('Import to remove from each file.  ' 'Can be specified multiple times.'),
     )
     parser.add_argument(
-        "--replace-import",
-        action="append",
+        '--replace-import',
+        action='append',
         default=[],
         type=_validate_replace_import,
         help=(
-            "Module pairs to replace imports. "
-            "For example: `--replace-import orig.mod=new.mod`.  "
-            "For renames of a specific imported attribute, use the form "
-            "`--replace-import orig.mod=new.mod:attr`.  "
-            "Can be specified multiple times."
+            'Module pairs to replace imports. '
+            'For example: `--replace-import orig.mod=new.mod`.  '
+            'For renames of a specific imported attribute, use the form '
+            '`--replace-import orig.mod=new.mod:attr`.  '
+            'Can be specified multiple times.'
         ),
     )
     parser.add_argument(
-        "--application-directories",
-        default=".",
+        '--application-directories',
+        default='.',
         help=(
-            "Colon separated directories that are considered top-level "
-            "application directories.  Defaults to `%(default)s`"
+            'Colon separated directories that are considered top-level '
+            'application directories.  Defaults to `%(default)s`'
         ),
     )
     parser.add_argument(
-        "--unclassifiable-application-module",
-        action="append",
+        '--unclassifiable-application-module',
+        action='append',
         default=[],
-        dest="unclassifiable",
+        dest='unclassifiable',
         help=(
-            "(may be specified multiple times) module names that are "
-            "considered application modules.  this setting is intended to be "
-            "used for things like C modules which may not always appear on "
-            "the filesystem"
+            '(may be specified multiple times) module names that are '
+            'considered application modules.  this setting is intended to be '
+            'used for things like C modules which may not always appear on '
+            'the filesystem'
         ),
     )
 
     parser.add_argument(
-        "--separate-relative",
-        action="store_true",
+        '--separate-relative',
+        action='store_true',
         help=(
-            "(Deprecated) Separate explicit relative (`from . import ...`) "
-            "imports into a separate block."
+            '(Deprecated) Separate explicit relative (`from . import ...`) '
+            'imports into a separate block.'
         ),
     )
 
     parser.add_argument(
-        "--separate-from-import",
-        action="store_true",
+        '--separate-from-import',
+        action='store_true',
         help=(
-            "(Deprecated) Separate `from xx import xx` imports from "
-            "`import xx` imports with a new line."
+            '(Deprecated) Separate `from xx import xx` imports from '
+            '`import xx` imports with a new line.'
         ),
     )
 
@@ -783,15 +783,15 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     args = parser.parse_args(argv)
 
     for option in (
-        "diff_only",
-        "print_only",
-        "separate_relative",
-        "separate_from_import",
+        'diff_only',
+        'print_only',
+        'separate_relative',
+        'separate_from_import',
     ):
         if getattr(args, option):
             print(
                 f'warning: --{option.replace("_", "-")} is deprecated '
-                f"and will be removed",
+                f'and will be removed',
                 file=sys.stderr,
             )
 
@@ -805,8 +805,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 _validate_replace_import(replace_s) for replace_s in v
             )
 
-    if os.environ.get("PYTHONPATH"):
-        sys.stderr.write("$PYTHONPATH set, import order may be unexpected\n")
+    if os.environ.get('PYTHONPATH'):
+        sys.stderr.write('$PYTHONPATH set, import order may be unexpected\n')
         sys.stderr.flush()
 
     retv = 0
@@ -815,5 +815,5 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     return retv
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     raise SystemExit(main())
